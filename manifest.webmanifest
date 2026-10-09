@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "근무일 달력",
+  "short_name": "근무일",
+  "description": "퇴근할 때 한 번 눌러 근무 날짜와 퇴근 시간을 기록하는 개인용 달력",
+  "lang": "ko-KR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f7f4",
+  "theme_color": "#176b4d",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

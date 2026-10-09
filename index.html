@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#176b4d">
+  <meta name="description" content="퇴근할 때 한 번 눌러 근무 날짜와 퇴근 시간을 기록하는 개인용 달력">
+  <title>근무일 달력</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <style>
+    :root { color-scheme: light; --green:#176b4d; --green-dark:#10533b; --mint:#e3f3e9; --ink:#18251f; --muted:#6c7a72; --line:#e3eae5; --paper:#fff; --bg:#f4f7f4; --red:#b73535; --shadow:0 8px 28px rgba(26,67,46,.07); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .app { max-width:760px; margin:0 auto; padding:20px 16px calc(36px + env(safe-area-inset-bottom)); }
+    header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:4px 2px 18px; }
+    .brand { display:flex; align-items:center; gap:11px; min-width:0; }
+    .logo { width:43px; height:43px; border-radius:14px; background:var(--green); color:white; display:grid; place-items:center; font-size:24px; box-shadow:0 5px 14px rgba(23,107,77,.2); flex:0 0 auto; }
+    h1 { font-size:21px; letter-spacing:-.6px; margin:0; }
+    .subtitle { color:var(--muted); font-size:12px; margin-top:3px; }
+    .pill { border:1px solid var(--line); background:white; border-radius:999px; padding:8px 11px; font-size:12px; color:var(--muted); white-space:nowrap; }
+    .hero { border-radius:24px; color:white; padding:22px; background:linear-gradient(135deg,#176b4d,#0f533a); box-shadow:var(--shadow); position:relative; overflow:hidden; }
+    .hero:after { content:""; position:absolute; right:-44px; top:-58px; width:190px; height:190px; border:1px solid rgba(255,255,255,.11); border-radius:50%; box-shadow:0 0 0 23px rgba(255,255,255,.035),0 0 0 48px rgba(255,255,255,.025); pointer-events:none; }
+    .today-label { font-size:13px; color:#d7eee1; }
+    .today-date { font-weight:750; font-size:25px; letter-spacing:-.8px; margin:5px 0 18px; }
+    .clock-button { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; border:0; background:#fff; color:var(--green-dark); border-radius:16px; padding:16px 14px; font-weight:800; font-size:17px; box-shadow:0 5px 13px rgba(0,0,0,.1); position:relative; z-index:1; min-height:59px; }
+    .clock-button:active { transform:scale(.99); }
+    .clock-button .check { font-size:22px; }
+    .hero-note { font-size:12px; color:#d7eee1; margin:12px 1px 0; line-height:1.5; }
+    .layout { display:grid; grid-template-columns:1fr; gap:15px; margin-top:16px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:21px; padding:18px; box-shadow:0 3px 12px rgba(26,67,46,.025); min-width:0; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:15px; }
+    .section-title h2 { font-size:16px; margin:0; letter-spacing:-.3px; }
+    .month-nav { display:flex; align-items:center; gap:8px; }
+    .month-nav strong { min-width:95px; text-align:center; font-size:15px; }
+    .icon-btn { display:grid; place-items:center; width:32px; height:32px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:#fff; font-size:18px; }
+    .weekdays,.calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+    .weekday { text-align:center; padding:4px 0 8px; color:var(--muted); font-size:11px; font-weight:650; }
+    .weekday:first-child { color:#c05757; }
+    .day { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:7px 0 4px; min-height:56px; border:1px solid transparent; border-radius:12px; background:transparent; color:var(--ink); font-size:13px; gap:5px; }
+    .day.empty { pointer-events:none; }
+    .day .num { line-height:19px; }
+    .day .dot { width:6px; height:6px; border-radius:50%; background:transparent; }
+    .day.has-record { background:var(--mint); color:var(--green-dark); font-weight:750; }
+    .day.has-record .dot { background:var(--green); }
+    .day.today:not(.selected) { border-color:#b8d6c4; }
+    .day.selected { background:var(--green); color:#fff; border-color:var(--green); font-weight:800; }
+    .day.selected .dot { background:#fff; }
+    .calendar-legend { display:flex; align-items:center; gap:7px; margin-top:12px; color:var(--muted); font-size:11px; }
+    .legend-dot { width:8px; height:8px; background:var(--green); border-radius:50%; }
+    .editor-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:15px; }
+    .editor-head h2 { font-size:16px; margin:0 0 4px; }
+    .editor-head p { font-size:12px; color:var(--muted); margin:0; }
+    .record-tag { font-size:11px; padding:5px 9px; border-radius:999px; background:#f0f3f1; color:#67766e; white-space:nowrap; }
+    .record-tag.done { color:var(--green-dark); background:var(--mint); }
+    .time-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .field label { display:block; font-size:12px; color:var(--muted); margin:0 0 7px; }
+    .field input { width:100%; min-width:0; border:1px solid #dce5de; border-radius:12px; background:#fbfdfb; padding:12px 10px; color:var(--ink); }
+    .field input:focus,.select:focus { outline:2px solid #bbdfc9; border-color:var(--green); }
+    .helper { color:var(--muted); font-size:11px; line-height:1.5; margin:10px 0 14px; }
+    .actions { display:flex; gap:8px; }
+    .btn { border:1px solid var(--line); background:white; color:var(--ink); border-radius:12px; padding:11px 12px; font-weight:700; font-size:13px; min-height:44px; }
+    .btn.primary { background:var(--green); color:white; border-color:var(--green); flex:1; }
+    .btn.danger { color:var(--red); }
+    .copy-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; align-items:end; }
+    .select-wrap label { display:block; margin:0 0 7px; font-size:12px; color:var(--muted); }
+    .select { width:100%; min-width:0; border:1px solid #dce5de; border-radius:12px; background:white; padding:11px 10px; }
+    .copy-buttons { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+    .copy-buttons .btn { min-height:47px; }
+    .records { display:grid; gap:8px; }
+    .record-row { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid var(--line); border-radius:13px; padding:11px 12px; background:#fff; text-align:left; width:100%; }
+    .record-row:active { background:#f6faf7; }
+    .record-date { font-weight:750; font-size:13px; }
+    .record-time { color:var(--muted); font-size:12px; margin-top:3px; }
+    .record-arrow { color:#8a9b91; font-size:18px; }
+    .empty-state { color:var(--muted); text-align:center; padding:22px 10px; border:1px dashed #dce5de; border-radius:13px; font-size:13px; line-height:1.6; }
+    .tools { display:flex; flex-wrap:wrap; gap:8px; }
+    .tools .btn { flex:1 1 135px; }
+    .footnote { text-align:center; color:#7f8b83; font-size:11px; line-height:1.6; margin:14px 8px 0; }
+    .toast { position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom)); transform:translate(-50%,20px); opacity:0; pointer-events:none; background:#17251e; color:white; font-size:13px; padding:12px 16px; border-radius:999px; box-shadow:0 8px 25px rgba(0,0,0,.2); width:max-content; max-width:calc(100vw - 30px); text-align:center; transition:opacity .2s,transform .2s; z-index:10; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    .hidden { display:none !important; }
+    @media (min-width:650px) { .app { padding:26px 22px 40px; } .layout { grid-template-columns:1fr 1fr; align-items:start; } .calendar-card { grid-row:span 2; } .hero { padding:24px 26px; } .day { min-height:64px; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand"><div class="logo" aria-hidden="true">✓</div><div><h1>근무일 달력</h1><div class="subtitle">퇴근할 때 한 번 눌러 기록하세요</div></div></div>
+      <div class="pill" id="storagePill">이 기기에 저장</div>
+    </header>
+
+    <section class="hero" aria-labelledby="todayDate">
+      <div class="today-label">오늘도 수고했어요</div>
+      <div class="today-date" id="todayDate">오늘 날짜 확인 중…</div>
+      <button class="clock-button" id="clockOutButton"><span class="check">✓</span><span id="clockButtonText">오늘 퇴근 기록하기</span></button>
+      <div class="hero-note" id="heroNote">버튼을 누르면 오늘 날짜와 누른 시간이 퇴근 시간으로 저장돼요. 출근 시간은 달력에서 나중에 수정할 수 있어요.</div>
+    </section>
+
+    <div class="layout">
+      <section class="card calendar-card">
+        <div class="section-title">
+          <h2>월별 달력</h2>
+          <div class="month-nav"><button class="icon-btn" id="prevMonth" aria-label="이전 달">‹</button><strong id="monthTitle">2026년 10월</strong><button class="icon-btn" id="nextMonth" aria-label="다음 달">›</button></div>
+        </div>
+        <div class="weekdays" aria-hidden="true"><div class="weekday">일</div><div class="weekday">월</div><div class="weekday">화</div><div class="weekday">수</div><div class="weekday">목</div><div class="weekday">금</div><div class="weekday">토</div></div>
+        <div class="calendar-grid" id="calendarGrid" aria-label="근무 기록 달력"></div>
+        <div class="calendar-legend"><span class="legend-dot"></span><span>초록색은 근무 기록이 있는 날</span></div>
+      </section>
+
+      <section class="card">
+        <div class="editor-head"><div><h2 id="editorTitle">10월 9일 금요일</h2><p>출근 시간은 실제 시간으로 수정할 수 있어요.</p></div><span class="record-tag" id="recordTag">기록 없음</span></div>
+        <div class="time-fields">
+          <div class="field"><label for="startTime">출근 시간</label><input type="time" id="startTime" aria-label="출근 시간"></div>
+          <div class="field"><label for="endTime">퇴근 시간</label><input type="time" id="endTime" aria-label="퇴근 시간"></div>
+        </div>
+        <div class="helper">늦게 출근한 날도 실제 출근 시간을 입력하면 돼요. 시간을 비워 둔 채 저장해도 근무일 자체는 기록할 수 있어요.</div>
+        <div class="actions"><button class="btn primary" id="saveRecord">이 날짜 기록 저장</button><button class="btn danger" id="deleteRecord">삭제</button></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><h2>근무일 복사</h2><span class="record-tag" id="monthCount">0일 근무</span></div>
+        <div class="copy-row"><div class="select-wrap"><label for="copyFormat">날짜 표시 방식</label><select id="copyFormat" class="select"><option value="grouped">10월 1일, 3일, 5일</option><option value="compact">10월 1, 3, 5일</option><option value="full">10월 1일, 10월 3일, 10월 5일</option></select></div></div>
+        <div class="copy-buttons"><button class="btn primary" id="copyDates">근무 날짜 복사</button><button class="btn" id="copyTimes">날짜 + 시간 복사</button></div>
+        <div class="helper" style="margin-bottom:0">현재 달에 저장된 근무일만 복사해요. 붙여넣을 메시지에 맞게 형식을 골라 보세요.</div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><h2>이번 달 기록</h2><span style="font-size:12px;color:var(--muted)" id="recordsSubtitle">날짜순</span></div>
+        <div id="recordsList" class="records"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><h2>백업 / 복원</h2></div>
+        <div class="helper" style="margin-top:-4px">기록은 이 기기의 브라우저에 저장돼요. PC에서도 같은 기록을 보려면 휴대폰에서 백업 파일을 내려받아 PC에서 복원해 주세요.</div>
+        <div class="tools"><button class="btn" id="exportData">기록 백업하기</button><button class="btn" id="importDataButton">백업 파일 가져오기</button><input class="hidden" id="importData" type="file" accept="application/json,.json"></div>
+      </section>
+    </div>
+    <p class="footnote">기록은 기본적으로 이 기기에만 저장됩니다. 브라우저 데이터 삭제 전 백업해 주세요.<br>홈 화면 아이콘으로 쓰려면 HTTPS 주소에 배포한 뒤 '홈 화면에 추가'를 선택하세요.</p>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    'use strict';
+    const STORAGE_KEY = 'workday-calendar-v1';
+    const $ = (id) => document.getElementById(id);
+    const dayNames = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+    let entries = loadEntries();
+    let selectedDate = todayKey();
+    let visibleYear = Number(selectedDate.slice(0,4));
+    let visibleMonth = Number(selectedDate.slice(5,7));
+    let toastTimer;
+
+    function seoulParts(date = new Date()) {
+      const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+      return Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type,p.value]));
+    }
+    function todayKey() { const p = seoulParts(); return `${p.year}-${p.month}-${p.day}`; }
+    function currentTime() { return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date()); }
+    function dateObj(key) { const [y,m,d] = key.split('-').map(Number); return new Date(y,m-1,d,12,0,0); }
+    function dateKey(y,m,d) { return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+    function loadEntries() {
+      try { const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); return data && typeof data === 'object' && !Array.isArray(data) ? data : {}; }
+      catch { return {}; }
+    }
+    function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+    function formatTitle(key, withYear=false) {
+      const d = dateObj(key); const m = d.getMonth()+1; const day = d.getDate();
+      return `${withYear ? d.getFullYear()+'년 ' : ''}${m}월 ${day}일 ${dayNames[d.getDay()]}`;
+    }
+    function monthEntries() { const prefix = `${visibleYear}-${String(visibleMonth).padStart(2,'0')}-`; return Object.keys(entries).filter(k => k.startsWith(prefix)).sort().map(k => ({date:k,...entries[k]})); }
+    function sortedKeys() { return Object.keys(entries).filter(k => entries[k] && typeof entries[k] === 'object').sort(); }
+    function monthName(y,m) { return `${y}년 ${m}월`; }
+    function showToast(message) { const t=$('toast'); t.textContent=message; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+    function hasEntry(key) { return Object.prototype.hasOwnProperty.call(entries,key); }
+    function renderAll() { renderHeader(); renderCalendar(); renderEditor(); renderRecords(); }
+    function renderHeader() {
+      const key=todayKey();
+      $('todayDate').textContent=formatTitle(key,true);
+      const entry=entries[key];
+      $('clockButtonText').textContent=entry && entry.end ? '오늘 퇴근 시간 다시 기록하기' : '오늘 퇴근 기록하기';
+      $('heroNote').textContent=entry && entry.end ? `오늘 퇴근 시간은 ${entry.end}로 저장되어 있어요. 다시 누르면 현재 시간으로 바꿀 수 있어요.` : '버튼을 누르면 오늘 날짜와 누른 시간이 퇴근 시간으로 저장돼요. 출근 시간은 달력에서 나중에 수정할 수 있어요.';
+    }
+    function renderCalendar() {
+      $('monthTitle').textContent=monthName(visibleYear,visibleMonth);
+      const grid=$('calendarGrid'); grid.innerHTML='';
+      const first=new Date(visibleYear,visibleMonth-1,1).getDay();
+      const total=new Date(visibleYear,visibleMonth,0).getDate();
+      for(let i=0;i<first;i++){ const empty=document.createElement('div'); empty.className='day empty'; empty.setAttribute('aria-hidden','true'); grid.appendChild(empty); }
+      const today=todayKey();
+      for(let day=1;day<=total;day++){
+        const key=dateKey(visibleYear,visibleMonth,day); const entry=entries[key];
+        const b=document.createElement('button'); b.type='button'; b.className='day';
+        if(entry) b.classList.add('has-record'); if(key===today) b.classList.add('today'); if(key===selectedDate) b.classList.add('selected');
+        b.setAttribute('aria-label',`${formatTitle(key)}${entry?' 근무 기록 있음':''}`); b.setAttribute('aria-pressed',key===selectedDate?'true':'false');
+        const num=document.createElement('span'); num.className='num'; num.textContent=day;
+        const dot=document.createElement('span'); dot.className='dot';
+        b.append(num,dot); b.addEventListener('click',()=>{selectedDate=key;renderCalendar();renderEditor();}); grid.appendChild(b);
+      }
+      $('monthCount').textContent=`${monthEntries().length}일 근무`;
+    }
+    function renderEditor() {
+      $('editorTitle').textContent=formatTitle(selectedDate);
+      const entry=entries[selectedDate];
+      $('startTime').value=entry?.start || ''; $('endTime').value=entry?.end || '';
+      $('recordTag').textContent=entry?'근무 기록 있음':'기록 없음'; $('recordTag').classList.toggle('done',!!entry);
+      $('deleteRecord').disabled=!entry; $('deleteRecord').style.opacity=entry?'1':'.45';
+    }
+    function renderRecords() {
+      const list=$('recordsList'); list.innerHTML=''; const rows=monthEntries().reverse();
+      if(!rows.length){ const empty=document.createElement('div');empty.className='empty-state';empty.textContent='아직 이번 달 기록이 없어요.\n일을 마친 뒤 위의 퇴근 기록 버튼을 눌러 보세요.';list.appendChild(empty); return; }
+      rows.forEach(r=>{
+        const b=document.createElement('button');b.type='button';b.className='record-row';
+        const left=document.createElement('div');
+        const title=document.createElement('div');title.className='record-date';title.textContent=formatTitle(r.date);
+        const times=document.createElement('div');times.className='record-time';times.textContent=`출근 ${r.start||'미입력'} · 퇴근 ${r.end||'미입력'}`;
+        left.append(title,times);const arrow=document.createElement('span');arrow.className='record-arrow';arrow.textContent='›';b.append(left,arrow);
+        b.addEventListener('click',()=>{selectedDate=r.date;renderCalendar();renderEditor();window.scrollTo({top:$('calendarGrid').getBoundingClientRect().top+window.scrollY-95,behavior:'smooth'});});list.appendChild(b);
+      });
+    }
+    $('clockOutButton').addEventListener('click',()=>{
+      const key=todayKey(); const now=currentTime(); const old=entries[key];
+      if(old && old.end && !confirm(`오늘 퇴근 시간이 ${old.end}로 저장돼 있어요. ${now}(으)로 바꿀까요?`)) return;
+      entries[key]={start:old?.start||'',end:now}; persist(); selectedDate=key;visibleYear=Number(key.slice(0,4));visibleMonth=Number(key.slice(5,7));renderAll();showToast(`오늘 퇴근 시간 ${now} 저장 완료`);
+    });
+    $('prevMonth').addEventListener('click',()=>{visibleMonth--;if(visibleMonth<1){visibleMonth=12;visibleYear--;}renderCalendar();renderRecords();});
+    $('nextMonth').addEventListener('click',()=>{visibleMonth++;if(visibleMonth>12){visibleMonth=1;visibleYear++;}renderCalendar();renderRecords();});
+    $('saveRecord').addEventListener('click',()=>{
+      const start=$('startTime').value;const end=$('endTime').value;
+      if(start && end && end < start && !confirm('퇴근 시간이 출근 시간보다 이른 시간으로 입력되어 있어요. 자정을 넘겨 일한 경우라면 저장해도 괜찮아요. 계속할까요?')) return;
+      entries[selectedDate]={start,end};persist();renderAll();showToast(`${formatTitle(selectedDate)} 기록을 저장했어요`);
+    });
+    $('deleteRecord').addEventListener('click',()=>{
+      if(!hasEntry(selectedDate))return;
+      if(confirm(`${formatTitle(selectedDate)} 근무 기록을 삭제할까요?`)){delete entries[selectedDate];persist();renderAll();showToast('기록을 삭제했어요');}
+    });
+    function groupedDateText(keys, mode) {
+      if(!keys.length)return '';
+      if(mode==='full')return keys.map(k=>{const d=dateObj(k);return `${d.getMonth()+1}월 ${d.getDate()}일`;}).join(', ');
+      const groups=[];let active=null;
+      for(const key of keys){const d=dateObj(key);const ym=`${d.getFullYear()}-${d.getMonth()+1}`;
+        if(!active||active.ym!==ym){active={ym,month:d.getMonth()+1,days:[]};groups.push(active);}active.days.push(d.getDate());}
+      if(mode==='compact') return groups.map(g=>`${g.month}월 ${g.days.join(', ')}일`).join(', ');
+      return groups.map(g=>`${g.month}월 ${g.days.map(day=>`${day}일`).join(', ')}`).join(', ');
+    }
+    async function copyText(text, emptyMessage) {
+      if(!text){showToast(emptyMessage);return;}
+      try { await navigator.clipboard.writeText(text); showToast('복사했어요. 메시지에 붙여넣으면 돼요!'); }
+      catch {
+        const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+        const ok=document.execCommand('copy');ta.remove();showToast(ok?'복사했어요. 메시지에 붙여넣으면 돼요!':'복사가 안 됐어요. 사이트 주소가 HTTPS인지 확인해 주세요.');
+      }
+    }
+    $('copyDates').addEventListener('click',()=>{const rows=monthEntries();const fmt=$('copyFormat').value;const keys=rows.map(r=>r.date);copyText(groupedDateText(keys,fmt),'복사할 근무일이 아직 없어요.');});
+    $('copyTimes').addEventListener('click',()=>{
+      const rows=monthEntries();if(!rows.length){showToast('복사할 근무일이 아직 없어요.');return;}
+      const text=rows.map(r=>{const d=dateObj(r.date);return `${d.getMonth()+1}월 ${d.getDate()}일 (출근 ${r.start||'미입력'}, 퇴근 ${r.end||'미입력'})`;}).join('\n');copyText(text,'복사할 근무일이 아직 없어요.');
+    });
+    $('exportData').addEventListener('click',()=>{
+      const payload={app:'근무일 달력',version:1,exportedAt:new Date().toISOString(),entries};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`근무일-백업-${todayKey()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('백업 파일을 저장했어요');
+    });
+    $('importDataButton').addEventListener('click',()=>$('importData').click());
+    $('importData').addEventListener('change',async e=>{
+      const file=e.target.files?.[0];if(!file)return;
+      try { const raw=JSON.parse(await file.text());const imported=raw.entries&&typeof raw.entries==='object'?raw.entries:raw;
+        const valid={};for(const [key,val] of Object.entries(imported)){if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&val&&typeof val==='object'){valid[key]={start:typeof val.start==='string'?val.start:'',end:typeof val.end==='string'?val.end:''};}}
+        if(!Object.keys(valid).length)throw new Error('no entries');
+        if(confirm(`${Object.keys(valid).length}개 날짜의 기록을 가져올까요? 같은 날짜의 기존 기록은 백업 파일 내용으로 바뀝니다.`)){entries={...entries,...valid};persist();renderAll();showToast('백업 기록을 가져왔어요');}
+      } catch { alert('올바른 근무일 백업 JSON 파일이 아니에요.'); }
+      e.target.value='';
+    });
+    if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    renderAll();
+  })();
+  </script>
+</body>
+</html>
