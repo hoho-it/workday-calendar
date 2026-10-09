@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#176b4d">
-  <meta name="description" content="퇴근할 때 한 번 눌러 근무 날짜와 퇴근 시간을 기록하는 개인용 달력">
+  <meta name="description" content="출근과 퇴근 때 한 번 눌러 근무 날짜와 시간을 기록하는 개인용 달력">
   <title>근무일 달력</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon-192.png" type="image/png">
@@ -26,9 +26,12 @@
     .hero:after { content:""; position:absolute; right:-44px; top:-58px; width:190px; height:190px; border:1px solid rgba(255,255,255,.11); border-radius:50%; box-shadow:0 0 0 23px rgba(255,255,255,.035),0 0 0 48px rgba(255,255,255,.025); pointer-events:none; }
     .today-label { font-size:13px; color:#d7eee1; }
     .today-date { font-weight:750; font-size:25px; letter-spacing:-.8px; margin:5px 0 18px; }
-    .clock-button { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; border:0; background:#fff; color:var(--green-dark); border-radius:16px; padding:16px 14px; font-weight:800; font-size:17px; box-shadow:0 5px 13px rgba(0,0,0,.1); position:relative; z-index:1; min-height:59px; }
+    .clock-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; position:relative; z-index:1; }
+    .clock-button { width:100%; display:flex; align-items:center; justify-content:center; gap:7px; border:0; background:#fff; color:var(--green-dark); border-radius:15px; padding:13px 8px; font-weight:800; font-size:14px; line-height:1.25; box-shadow:0 5px 13px rgba(0,0,0,.1); min-height:58px; }
     .clock-button:active { transform:scale(.99); }
-    .clock-button .check { font-size:22px; }
+    .clock-button .check { font-size:19px; flex:0 0 auto; }
+    .clock-button span:last-child { text-align:center; }
+    .sort-toggle { min-height:36px; padding:7px 10px; white-space:nowrap; font-size:12px; }
     .hero-note { font-size:12px; color:#d7eee1; margin:12px 1px 0; line-height:1.5; }
     .layout { display:grid; grid-template-columns:1fr; gap:15px; margin-top:16px; }
     .card { background:var(--paper); border:1px solid var(--line); border-radius:21px; padding:18px; box-shadow:0 3px 12px rgba(26,67,46,.025); min-width:0; }
@@ -96,8 +99,11 @@
     <section class="hero" aria-labelledby="todayDate">
       <div class="today-label">오늘도 수고했어요</div>
       <div class="today-date" id="todayDate">오늘 날짜 확인 중…</div>
-      <button class="clock-button" id="clockOutButton"><span class="check">✓</span><span id="clockButtonText">오늘 퇴근 기록하기</span></button>
-      <div class="hero-note" id="heroNote">버튼을 누르면 오늘 날짜와 누른 시간이 퇴근 시간으로 저장돼요. 출근 시간은 달력에서 나중에 수정할 수 있어요.</div>
+      <div class="clock-actions">
+        <button class="clock-button" id="clockInButton"><span class="check" aria-hidden="true">↗</span><span id="clockInButtonText">출근 시간 저장</span></button>
+        <button class="clock-button" id="clockOutButton"><span class="check" aria-hidden="true">✓</span><span id="clockOutButtonText">퇴근 시간 저장</span></button>
+      </div>
+      <div class="hero-note" id="heroNote">출근할 때는 출근 시간 저장, 퇴근할 때는 퇴근 시간 저장을 눌러 주세요. 누른 시각이 한국 시간으로 기록돼요.</div>
     </section>
 
     <div class="layout">
@@ -117,7 +123,7 @@
           <div class="field"><label for="startTime">출근 시간</label><input type="time" id="startTime" aria-label="출근 시간"></div>
           <div class="field"><label for="endTime">퇴근 시간</label><input type="time" id="endTime" aria-label="퇴근 시간"></div>
         </div>
-        <div class="helper">늦게 출근한 날도 실제 출근 시간을 입력하면 돼요. 시간을 비워 둔 채 저장해도 근무일 자체는 기록할 수 있어요.</div>
+        <div class="helper">늦게 출근한 날은 시간을 직접 수정해 저장할 수 있어요. 오늘 출근하면서 위의 '출근 시간 저장'을 누르면 입력 없이 현재 시간이 기록돼요.</div>
         <div class="actions"><button class="btn primary" id="saveRecord">이 날짜 기록 저장</button><button class="btn danger" id="deleteRecord">삭제</button></div>
       </section>
 
@@ -125,11 +131,11 @@
         <div class="section-title"><h2>근무일 복사</h2><span class="record-tag" id="monthCount">0일 근무</span></div>
         <div class="copy-row"><div class="select-wrap"><label for="copyFormat">날짜 표시 방식</label><select id="copyFormat" class="select"><option value="grouped">10월 1일, 3일, 5일</option><option value="compact">10월 1, 3, 5일</option><option value="full">10월 1일, 10월 3일, 10월 5일</option></select></div></div>
         <div class="copy-buttons"><button class="btn primary" id="copyDates">근무 날짜 복사</button><button class="btn" id="copyTimes">날짜 + 시간 복사</button></div>
-        <div class="helper" style="margin-bottom:0">현재 달에 저장된 근무일만 복사해요. 붙여넣을 메시지에 맞게 형식을 골라 보세요.</div>
+        <div class="helper" style="margin-bottom:0">현재 달에 저장된 근무일만 복사해요. '이번 달 기록'의 최신순/오래된순 설정이 복사 순서에도 적용돼요.</div>
       </section>
 
       <section class="card">
-        <div class="section-title"><h2>이번 달 기록</h2><span style="font-size:12px;color:var(--muted)" id="recordsSubtitle">날짜순</span></div>
+        <div class="section-title"><h2>이번 달 기록</h2><button class="btn sort-toggle" id="toggleRecordOrder" type="button" aria-pressed="true">최신순 ↓</button></div>
         <div id="recordsList" class="records"></div>
       </section>
 
@@ -154,6 +160,7 @@
     let visibleYear = Number(selectedDate.slice(0,4));
     let visibleMonth = Number(selectedDate.slice(5,7));
     let toastTimer;
+    let newestFirst = localStorage.getItem('workday-calendar-order') !== 'oldest';
 
     function seoulParts(date = new Date()) {
       const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
@@ -173,6 +180,7 @@
       return `${withYear ? d.getFullYear()+'년 ' : ''}${m}월 ${day}일 ${dayNames[d.getDay()]}`;
     }
     function monthEntries() { const prefix = `${visibleYear}-${String(visibleMonth).padStart(2,'0')}-`; return Object.keys(entries).filter(k => k.startsWith(prefix)).sort().map(k => ({date:k,...entries[k]})); }
+    function orderedMonthEntries() { const rows=monthEntries(); return newestFirst ? rows.reverse() : rows; }
     function sortedKeys() { return Object.keys(entries).filter(k => entries[k] && typeof entries[k] === 'object').sort(); }
     function monthName(y,m) { return `${y}년 ${m}월`; }
     function showToast(message) { const t=$('toast'); t.textContent=message; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
@@ -182,8 +190,9 @@
       const key=todayKey();
       $('todayDate').textContent=formatTitle(key,true);
       const entry=entries[key];
-      $('clockButtonText').textContent=entry && entry.end ? '오늘 퇴근 시간 다시 기록하기' : '오늘 퇴근 기록하기';
-      $('heroNote').textContent=entry && entry.end ? `오늘 퇴근 시간은 ${entry.end}로 저장되어 있어요. 다시 누르면 현재 시간으로 바꿀 수 있어요.` : '버튼을 누르면 오늘 날짜와 누른 시간이 퇴근 시간으로 저장돼요. 출근 시간은 달력에서 나중에 수정할 수 있어요.';
+      $('clockInButtonText').textContent=entry && entry.start ? '출근 시간 다시 저장' : '출근 시간 저장';
+      $('clockOutButtonText').textContent=entry && entry.end ? '퇴근 시간 다시 저장' : '퇴근 시간 저장';
+      $('heroNote').textContent=`${entry?.start ? `출근 ${entry.start}` : '출근 미기록'} · ${entry?.end ? `퇴근 ${entry.end}` : '퇴근 미기록'} — 버튼을 누르면 현재 한국 시간이 저장돼요.`;
     }
     function renderCalendar() {
       $('monthTitle').textContent=monthName(visibleYear,visibleMonth);
@@ -211,8 +220,10 @@
       $('deleteRecord').disabled=!entry; $('deleteRecord').style.opacity=entry?'1':'.45';
     }
     function renderRecords() {
-      const list=$('recordsList'); list.innerHTML=''; const rows=monthEntries().reverse();
-      if(!rows.length){ const empty=document.createElement('div');empty.className='empty-state';empty.textContent='아직 이번 달 기록이 없어요.\n일을 마친 뒤 위의 퇴근 기록 버튼을 눌러 보세요.';list.appendChild(empty); return; }
+      const list=$('recordsList'); list.innerHTML=''; const rows=orderedMonthEntries();
+      $('toggleRecordOrder').textContent=newestFirst?'최신순 ↓':'오래된순 ↑';
+      $('toggleRecordOrder').setAttribute('aria-pressed',newestFirst?'true':'false');
+      if(!rows.length){ const empty=document.createElement('div');empty.className='empty-state';empty.textContent='아직 이번 달 기록이 없어요.\n출근할 때 출근 기록, 퇴근할 때 퇴근 기록 버튼을 눌러 보세요.';list.appendChild(empty); return; }
       rows.forEach(r=>{
         const b=document.createElement('button');b.type='button';b.className='record-row';
         const left=document.createElement('div');
@@ -222,10 +233,22 @@
         b.addEventListener('click',()=>{selectedDate=r.date;renderCalendar();renderEditor();window.scrollTo({top:$('calendarGrid').getBoundingClientRect().top+window.scrollY-95,behavior:'smooth'});});list.appendChild(b);
       });
     }
-    $('clockOutButton').addEventListener('click',()=>{
-      const key=todayKey(); const now=currentTime(); const old=entries[key];
-      if(old && old.end && !confirm(`오늘 퇴근 시간이 ${old.end}로 저장돼 있어요. ${now}(으)로 바꿀까요?`)) return;
-      entries[key]={start:old?.start||'',end:now}; persist(); selectedDate=key;visibleYear=Number(key.slice(0,4));visibleMonth=Number(key.slice(5,7));renderAll();showToast(`오늘 퇴근 시간 ${now} 저장 완료`);
+    function recordCurrentTime(kind) {
+      const key=todayKey(); const now=currentTime(); const old=entries[key] || {start:'',end:''};
+      const field=kind==='start'?'start':'end';
+      const label=kind==='start'?'출근':'퇴근';
+      if(old[field] && !confirm(`오늘 ${label} 시간이 ${old[field]}로 저장돼 있어요. ${now}(으)로 바꿀까요?`)) return;
+      entries[key]={start:old.start||'',end:old.end||''};
+      entries[key][field]=now;
+      persist(); selectedDate=key;visibleYear=Number(key.slice(0,4));visibleMonth=Number(key.slice(5,7));renderAll();showToast(`오늘 ${label} 시간 ${now} 저장 완료`);
+    }
+    $('clockInButton').addEventListener('click',()=>recordCurrentTime('start'));
+    $('clockOutButton').addEventListener('click',()=>recordCurrentTime('end'));
+    $('toggleRecordOrder').addEventListener('click',()=>{
+      newestFirst=!newestFirst;
+      localStorage.setItem('workday-calendar-order',newestFirst?'newest':'oldest');
+      renderRecords();
+      showToast(newestFirst?'이번 달 기록을 최신순으로 정렬했어요':'이번 달 기록을 오래된순으로 정렬했어요');
     });
     $('prevMonth').addEventListener('click',()=>{visibleMonth--;if(visibleMonth<1){visibleMonth=12;visibleYear--;}renderCalendar();renderRecords();});
     $('nextMonth').addEventListener('click',()=>{visibleMonth++;if(visibleMonth>12){visibleMonth=1;visibleYear++;}renderCalendar();renderRecords();});
@@ -255,9 +278,9 @@
         const ok=document.execCommand('copy');ta.remove();showToast(ok?'복사했어요. 메시지에 붙여넣으면 돼요!':'복사가 안 됐어요. 사이트 주소가 HTTPS인지 확인해 주세요.');
       }
     }
-    $('copyDates').addEventListener('click',()=>{const rows=monthEntries();const fmt=$('copyFormat').value;const keys=rows.map(r=>r.date);copyText(groupedDateText(keys,fmt),'복사할 근무일이 아직 없어요.');});
+    $('copyDates').addEventListener('click',()=>{const rows=orderedMonthEntries();const fmt=$('copyFormat').value;const keys=rows.map(r=>r.date);copyText(groupedDateText(keys,fmt),'복사할 근무일이 아직 없어요.');});
     $('copyTimes').addEventListener('click',()=>{
-      const rows=monthEntries();if(!rows.length){showToast('복사할 근무일이 아직 없어요.');return;}
+      const rows=orderedMonthEntries();if(!rows.length){showToast('복사할 근무일이 아직 없어요.');return;}
       const text=rows.map(r=>{const d=dateObj(r.date);return `${d.getMonth()+1}월 ${d.getDate()}일 (출근 ${r.start||'미입력'}, 퇴근 ${r.end||'미입력'})`;}).join('\n');copyText(text,'복사할 근무일이 아직 없어요.');
     });
     $('exportData').addEventListener('click',()=>{
@@ -276,6 +299,12 @@
     });
     if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
     renderAll();
+    // Android 등 지원되는 설치형 PWA의 앱 아이콘 바로가기에서 요청한 출근/퇴근 기록을 실행합니다.
+    const shortcutAction = new URLSearchParams(location.search).get('action');
+    if(shortcutAction==='clock-in' || shortcutAction==='clock-out') {
+      history.replaceState(null,'',location.pathname);
+      recordCurrentTime(shortcutAction==='clock-in'?'start':'end');
+    }
   })();
   </script>
 </body>
